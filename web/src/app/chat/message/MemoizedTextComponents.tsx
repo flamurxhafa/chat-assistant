@@ -81,7 +81,16 @@ export const MemoizedAnchor = memo(
           }
 
           let icon: React.ReactNode = null;
-         
+          if (associatedDoc?.source_type === "web") {
+            icon = <WebResultIcon url={associatedDoc.link} />;
+          } else {
+            icon = (
+              <SourceIcon
+                sourceType={associatedDoc?.source_type as ValidSources}
+                iconSize={18}
+              />
+            );
+          }
           const associatedDocInfo = associatedDoc
             ? {
                 ...associatedDoc,

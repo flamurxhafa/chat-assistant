@@ -93,7 +93,11 @@ export function ChatDocumentDisplay({
           className="cursor-pointer text-left flex flex-col"
         >
           <div className="line-clamp-1 mb-1 flex h-6 items-center gap-2 text-xs">
-      
+            {document.is_internet || document.source_type === "web" ? (
+              <WebResultIcon url={document.link} />
+            ) : (
+              <SourceIcon sourceType={document.source_type} iconSize={18} />
+            )}
             <div className="line-clamp-1 text-neutral-900 dark:text-neutral-300 text-sm font-semibold">
               {(document.semantic_identifier || document.document_id).length >
               (modal ? 30 : 40)

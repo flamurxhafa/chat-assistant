@@ -135,11 +135,12 @@ services:
       # Vespa Language Forcing
       # See: https://docs.vespa.ai/en/linguistics.html
       - VESPA_LANGUAGE_OVERRIDE=${VESPA_LANGUAGE_OVERRIDE:-}
-    env_file:
-      - .env
+
     # Uncomment the line below to use if IAM_AUTH is true and you are using iam auth for postgres
     # volumes:
     #   - ./bundle.pem:/app/bundle.pem:ro
+    env_file:
+      - .env
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
@@ -283,7 +284,6 @@ services:
     # Uncomment the line below to use if IAM_AUTH is true and you are using iam auth for postgres
     # volumes:
     #   - ./bundle.pem:/app/bundle.pem:ro
-
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # optional, only for debugging purposes

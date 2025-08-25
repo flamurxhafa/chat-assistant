@@ -34,6 +34,9 @@ export const LogoComponent = memo(function LogoComponent({
     >
       {enterpriseSettings && enterpriseSettings.application_name ? (
         <>
+          <div className="flex-none my-auto">
+            <Logo height={24} width={24} />
+          </div>
           <div className="w-full">
             <HeaderTitle backgroundToggled={backgroundToggled}>
               {enterpriseSettings.application_name}

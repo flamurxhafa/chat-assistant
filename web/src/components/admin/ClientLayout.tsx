@@ -112,15 +112,15 @@ const custom_assistants_items = (
 
   if (!isCurator) {
     items.push(
-      // {
-      //   name: (
-      //     <div className="flex">
-      //       <SlackIconSkeleton className="text-text-700" />
-      //       <div className="ml-1">Slack Bots</div>
-      //     </div>
-      //   ),
-      //   link: "/admin/bots",
-      // },
+      {
+        name: (
+          <div className="flex">
+            <SlackIconSkeleton className="text-text-700" />
+            <div className="ml-1">Slack Bots</div>
+          </div>
+        ),
+        link: "/admin/bots",
+      },
       {
         name: (
           <div className="flex">

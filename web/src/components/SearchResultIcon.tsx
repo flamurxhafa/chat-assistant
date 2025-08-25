@@ -50,9 +50,9 @@ export function SearchResultIcon({ url }: { url: string }) {
   if (!faviconUrl) {
     return <SourceIcon sourceType={ValidSources.Web} iconSize={18} />;
   }
-  // if (url.includes("onyx.app")) {
-  //   return <OnyxIcon size={18} className="dark:text-[#fff] text-[#000]" />;
-  // }
+  if (url.includes("onyx.app")) {
+    return <OnyxIcon size={18} className="dark:text-[#fff] text-[#000]" />;
+  }
 
   return (
     <div className="rounded-full w-[18px] h-[18px] overflow-hidden bg-background-200">

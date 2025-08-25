@@ -46,7 +46,15 @@ export default function LogoWithText({
           onClick={() => toggleSidebar()}
           className="flex gap-x-2 items-center ml-0 cursor-pointer desktop:hidden "
         >
-          
+          {!toggled ? (
+            <Logo className="desktop:hidden" height={24} width={24} />
+          ) : (
+            <LogoComponent
+              show={toggled}
+              enterpriseSettings={enterpriseSettings!}
+              backgroundToggled={toggled}
+            />
+          )}
 
           <FiSidebar
             size={20}
@@ -57,6 +65,7 @@ export default function LogoWithText({
         </div>
       ) : (
         <div className="mr-1 invisible mb-auto h-6 w-6">
+          <Logo height={24} width={24} />
         </div>
       )}
 

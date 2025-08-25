@@ -16,7 +16,12 @@ export const ResultIcon = ({
 }) => {
   return (
     <div className="flex-none">
-      {""}
+      {" "}
+      {doc.is_internet || doc.source_type === "web" ? (
+        <WebResultIcon size={size} url={doc.link} />
+      ) : (
+        <SourceIcon iconSize={size} sourceType={doc.source_type} />
+      )}
     </div>
   );
 };

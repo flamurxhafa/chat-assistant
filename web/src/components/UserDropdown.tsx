@@ -283,7 +283,13 @@ export function UserDropdown({
                     <div className="border-t border-border my-1" />
                   )}
 
-             
+                {showLogout && (
+                  <DropdownOption
+                    onClick={handleLogout}
+                    icon={<FiLogOut size={16} className="my-auto" />}
+                    label="Log out"
+                  />
+                )}
               </>
             )}
           </div>

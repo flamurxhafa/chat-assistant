@@ -27,6 +27,20 @@ export function Logo({
   height = height || defaultHeight;
   width = width || defaultWidth;
 
+  if (
+    !settings ||
+    !settings.enterpriseSettings ||
+    !settings.enterpriseSettings.use_custom_logo
+  ) {
+    return (
+      <div style={{ height, width }} className={className}>
+        <OnyxIcon
+          size={height}
+          className={`${className} dark:text-[#fff] text-[#000]`}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
