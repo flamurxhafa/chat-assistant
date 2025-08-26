@@ -17,6 +17,8 @@ services:
     restart: unless-stopped
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       # Auth Settings
       - AUTH_TYPE=${AUTH_TYPE:-disabled}
@@ -139,8 +141,7 @@ services:
     # Uncomment the line below to use if IAM_AUTH is true and you are using iam auth for postgres
     # volumes:
     #   - ./bundle.pem:/app/bundle.pem:ro
-    env_file:
-      - .env
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:
