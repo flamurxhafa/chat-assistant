@@ -221,7 +221,7 @@ export function UserProvider({
     });
 
     let updatedPinnedAssistantsIds = currentPinnedAssistantIDs;
-
+    
     if (isPinned) {
       updatedPinnedAssistantsIds.push(assistantId);
     } else {
@@ -229,6 +229,14 @@ export function UserProvider({
         (id) => id !== assistantId
       );
     }
+    function reorderAssistantIds(ids: number[]): number[] {
+        if (!ids.includes(-1)) return ids;        // nothing to do if no 0
+
+        // put 0 first, then filter out the rest
+        return [-1, ...ids.filter(id => id !== -1)];
+      }
+ updatedPinnedAssistantsIds = reorderAssistantIds(updatedPinnedAssistantsIds);
+      
     try {
       const response = await fetch(`/api/user/pinned-assistants`, {
         method: "PATCH",

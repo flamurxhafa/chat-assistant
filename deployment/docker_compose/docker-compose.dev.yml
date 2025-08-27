@@ -149,9 +149,6 @@ services:
       options:
         max-size: "50m"
         max-file: "6"
-    # optional, only for debugging purposes
-    volumes:
-      - api_server_logs:/var/log
 
   background:
     image: onyxdotapp/onyx-backend:${IMAGE_TAG:-latest}
@@ -288,8 +285,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # optional, only for debugging purposes
-    volumes:
-      - background_logs:/var/log
+  
     logging:
       driver: json-file
       options:
@@ -359,7 +355,6 @@ services:
       # Not necessary, this is just to reduce download time during startup
       - model_cache_huggingface:/app/.cache/huggingface/
       # optional, only for debugging purposes
-      - inference_model_server_logs:/var/log
     logging:
       driver: json-file
       options:
@@ -393,7 +388,6 @@ services:
       # Not necessary, this is just to reduce download time during startup
       - indexing_huggingface_model_cache:/app/.cache/huggingface/
       # optional, only for debugging purposes
-      - indexing_model_server_logs:/var/log
     logging:
       driver: json-file
       options:

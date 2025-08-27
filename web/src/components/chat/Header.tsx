@@ -168,9 +168,7 @@ export default function FunctionalHeader({
                   : "")
               }
             >
-              <div className=" cursor-pointer ml-2 mr-4 flex-none text-text-700 hover:text-text-600 transition-colors duration-300">
-                <NewChatIcon size={24} />
-              </div>
+             
             </Link>
             <div
               style={{ transition: "width 0.30s ease-out" }}
