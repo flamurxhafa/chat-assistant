@@ -341,45 +341,7 @@ export default function NRFPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {!user && authType !== "disabled" && showLoginModal ? (
-        <Modal className="max-w-md mx-auto">
-          {fetchingAuth ? (
-            <p className="p-4">Loading login info…</p>
-          ) : authType == "basic" ? (
-            <LoginPage
-              authUrl={null}
-              authTypeMetadata={{
-                authType: authType as AuthType,
-                autoRedirect: false,
-                requiresVerification: false,
-                anonymousUserEnabled: null,
-              }}
-              nextUrl="/nrf"
-              searchParams={{}}
-            />
-          ) : (
-            <div className="flex flex-col items-center">
-              <h2 className="text-center text-xl text-strong font-bold mb-4">
-                Welcome to Onyx
-              </h2>
-              <Button
-                className="bg-agent w-full hover:bg-accent-hover text-white"
-                onClick={() => {
-                  if (window.top) {
-                    window.top.location.href = "/auth/login";
-                  } else {
-                    window.location.href = "/auth/login";
-                  }
-                }}
-              >
-                Log in
-              </Button>
-            </div>
-          )}
-        </Modal>
-      ) : (
-        llmProviders.length == 0 && <ApiKeyModal setPopup={setPopup} />
-      )}
+   
     </div>
   );
 }

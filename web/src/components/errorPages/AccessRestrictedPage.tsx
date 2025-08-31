@@ -118,16 +118,7 @@ export default function AccessRestricted() {
           >
             Manage Existing Subscription
           </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await logout();
-              window.location.reload();
-            }}
-            className="w-full sm:w-auto"
-          >
-            Log out
-          </Button>
+         
         </div>
         {error && <p className="text-error">{error}</p>}
         <p>

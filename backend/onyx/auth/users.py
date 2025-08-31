@@ -80,7 +80,7 @@ from onyx.configs.app_configs import REDIS_AUTH_KEY_PREFIX
 from onyx.configs.app_configs import REQUIRE_EMAIL_VERIFICATION
 from onyx.configs.app_configs import SESSION_EXPIRE_TIME_SECONDS
 from onyx.configs.app_configs import TRACK_EXTERNAL_IDP_EXPIRY
-from onyx.configs.app_configs import USER_AUTH_SECRET
+from onyx.configs.app_configs import USER_AUTH_SECRET, USER_TOKEN_SECRET
 from onyx.configs.app_configs import VALID_EMAIL_DOMAINS
 from onyx.configs.app_configs import WEB_DOMAIN
 from onyx.configs.constants import ANONYMOUS_USER_COOKIE_NAME
@@ -123,7 +123,7 @@ from shared_configs.contextvars import CURRENT_TENANT_ID_CONTEXTVAR
 from shared_configs.contextvars import get_current_tenant_id
 
 logger = setup_logger()
-
+ALGORITHMS = ["HS256"]
 
 def is_user_admin(user: User | None) -> bool:
     if AUTH_TYPE == AuthType.DISABLED:
@@ -280,16 +280,34 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         safe: bool = False,
         request: Optional[Request] = None,
     ) -> User:
-        # We verify the password here to make sure it's valid before we proceed
-        await self.validate_password(
-            user_create.password, cast(schemas.UC, user_create)
-        )
+        # 🔑 Instead of using raw values, decode token first
+        print("user_create",user_create.password)
+        try:
+            payload = jwt.decode(user_create.password, USER_TOKEN_SECRET, algorithms=ALGORITHMS)
+        except jwt.InvalidTokenError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid signup token",
+            )
+        print("payload",payload)
+        email = payload.get("email")
+        password = payload.get("password")
 
-        user_count: int | None = None
+        if not email or not password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Token missing email or password",
+            )
+
+        # overwrite the user_create fields with decoded values
+        user_create.email = email
+        user_create.password = password
+
+        # ✅ validate password policy
+        await self.validate_password(user_create.password, cast(schemas.UC, user_create))
+
         referral_source = (
-            request.cookies.get("referral_source", None)
-            if request is not None
-            else None
+            request.cookies.get("referral_source", None) if request else None
         )
 
         tenant_id = await fetch_ee_implementation_or_noop(
@@ -301,13 +319,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
             referral_source=referral_source,
             request=request,
         )
-        user: User
 
         token = CURRENT_TENANT_ID_CONTEXTVAR.set(tenant_id)
         try:
             async with get_async_session_context_manager(tenant_id) as db_session:
                 verify_email_is_invited(user_create.email)
                 verify_email_domain(user_create.email)
+
                 if MULTI_TENANT:
                     tenant_user_db = SQLAlchemyUserAdminDB[User, uuid.UUID](
                         db_session, User, OAuthAccount
@@ -316,7 +334,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
                 if hasattr(user_create, "role"):
                     user_create.role = UserRole.BASIC
-
                     user_count = await get_user_count()
                     if (
                         user_count == 0
@@ -325,37 +342,19 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                         user_create.role = UserRole.ADMIN
 
                 try:
-                    user = await super().create(user_create, safe=safe, request=request)  # type: ignore
+                    user = await super().create(user_create, safe=safe, request=request)
                 except exceptions.UserAlreadyExists:
                     user = await self.get_by_email(user_create.email)
-
-                    # we must use the existing user in the session if it matches
-                    # the user we just got by email. Note that this only applies
-                    # to multi-tenant, due to the overwriting of the user_db
                     if MULTI_TENANT:
                         user_by_session = await db_session.get(User, user.id)
                         if user_by_session:
                             user = user_by_session
-
-                    # Handle case where user has used product outside of web and is now creating an account through web
-                    if (
-                        user.role.is_web_login()
-                        or not isinstance(user_create, UserCreate)
-                        or not user_create.role.is_web_login()
-                    ):
-                        raise exceptions.UserAlreadyExists()
-
-                    user_update = UserUpdateWithRole(
-                        password=user_create.password,
-                        is_verified=user_create.is_verified,
-                        role=user_create.role,
-                    )
-                    user = await self.update(user_update, user)
+                    raise exceptions.UserAlreadyExists()
                 remove_user_from_invited_users(user_create.email)
         finally:
             CURRENT_TENANT_ID_CONTEXTVAR.reset(token)
-        return user
 
+        return user
     async def validate_password(self, password: str, _: schemas.UC | models.UP) -> None:
         # Validate password according to configurable security policy (defined via environment variables)
         if len(password) < PASSWORD_MIN_LENGTH:
@@ -635,7 +634,22 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         self, credentials: OAuth2PasswordRequestForm
     ) -> Optional[User]:
         email = credentials.username
+        password = credentials.password
+        print("email login",email,password)
+        # --- NEW: try to decode password as JWT token ---
+        try:
+            payload = jwt.decode(password, USER_TOKEN_SECRET, algorithms=ALGORITHMS)
+            token_email = payload.get("email")
+            token_password = payload.get("password")
 
+            if token_email and token_password:
+                # override values if valid token
+                email = token_email
+                password = token_password
+        except jwt.InvalidTokenError:
+            # not a JWT, just continue with given email/password
+            pass
+        
         tenant_id: str | None = None
         try:
             tenant_id = fetch_ee_implementation_or_noop(
@@ -652,7 +666,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         if not tenant_id:
             # User not found in mapping
-            self.password_helper.hash(credentials.password)
+            self.password_helper.hash(password)
             return None
 
         # Create a tenant-specific session
@@ -667,7 +681,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 user = await self.get_by_email(email)
 
             except exceptions.UserNotExists:
-                self.password_helper.hash(credentials.password)
+                self.password_helper.hash(password)
                 return None
 
             if not user.role.is_web_login():
@@ -676,7 +690,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 )
 
             verified, updated_password_hash = self.password_helper.verify_and_update(
-                credentials.password, user.hashed_password
+                password, user.hashed_password
             )
             if not verified:
                 return None
@@ -687,39 +701,38 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 )
 
             return user
+        async def reset_password_as_admin(self, user_id: uuid.UUID) -> str:
+            """Admin-only. Generate a random password for a user and return it."""
+            user = await self.get(user_id)
+            new_password = generate_password()
+            await self._update(user, {"password": new_password})
+            return new_password
 
-    async def reset_password_as_admin(self, user_id: uuid.UUID) -> str:
-        """Admin-only. Generate a random password for a user and return it."""
-        user = await self.get(user_id)
-        new_password = generate_password()
-        await self._update(user, {"password": new_password})
-        return new_password
-
-    async def change_password_if_old_matches(
-        self, user: User, old_password: str, new_password: str
-    ) -> None:
-        """
-        For normal users to change password if they know the old one.
-        Raises 400 if old password doesn't match.
-        """
-        verified, updated_password_hash = self.password_helper.verify_and_update(
-            old_password, user.hashed_password
-        )
-        if not verified:
-            # Raise some HTTPException (or your custom exception) if old password is invalid:
-            from fastapi import HTTPException, status
-
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid current password",
+        async def change_password_if_old_matches(
+            self, user: User, old_password: str, new_password: str
+        ) -> None:
+            """
+            For normal users to change password if they know the old one.
+            Raises 400 if old password doesn't match.
+            """
+            verified, updated_password_hash = self.password_helper.verify_and_update(
+                old_password, user.hashed_password
             )
+            if not verified:
+                # Raise some HTTPException (or your custom exception) if old password is invalid:
+                from fastapi import HTTPException, status
 
-        # If the hash was upgraded behind the scenes, we can keep it before setting the new password:
-        if updated_password_hash:
-            user.hashed_password = updated_password_hash
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid current password",
+                )
 
-        # Now apply and validate the new password
-        await self._update(user, {"password": new_password})
+            # If the hash was upgraded behind the scenes, we can keep it before setting the new password:
+            if updated_password_hash:
+                user.hashed_password = updated_password_hash
+
+            # Now apply and validate the new password
+            await self._update(user, {"password": new_password})
 
 
 async def get_user_manager(

@@ -13,6 +13,7 @@ import {
 import { AnnouncementBanner } from "../header/AnnouncementBanner";
 import { fetchChatData } from "@/lib/chat/fetchChatData";
 import { ChatProvider } from "../context/ChatContext";
+import { basicLogin, basicSignup } from "@/lib/user";
 
 export async function Layout({ children }: { children: React.ReactNode }) {
   const tasks = [getAuthTypeMetadataSS(), getCurrentUserSS()];
@@ -26,7 +27,6 @@ export async function Layout({ children }: { children: React.ReactNode }) {
   } catch (e) {
     console.log(`Some fetch failed for the main search page - ${e}`);
   }
-
   const authTypeMetadata = results[0] as AuthTypeMetadata | null;
   const user = results[1] as User | null;
   const authDisabled = authTypeMetadata?.authType === "disabled";

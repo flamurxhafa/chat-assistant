@@ -41,6 +41,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.rewrite(newUrl);
     }
   }
+  const url = request.nextUrl.clone();
+  const tokenInfo = url.searchParams.get("tokenInfo");
+  console.log("tokenInfo",tokenInfo)
+  // ✅ Token logic
+  if (tokenInfo) {
+    const res = NextResponse.next();
+    res.cookies.set("tokenInfo", tokenInfo, {
+      path: "/",
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
+
+    // strip token from URL so it doesn't stay visible
+    url.searchParams.delete("tokenInfo");
+    res.headers.set("Location", url.toString());
+    return res;
+  }
 
   // Continue with the response if no rewrite is needed
   return NextResponse.next();

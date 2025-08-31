@@ -276,20 +276,8 @@ export function UserDropdown({
                   }`}
                 />
 
-                {showLogout &&
-                  (showCuratorPanel ||
-                    showAdminPanel ||
-                    customNavItems.length > 0) && (
-                    <div className="border-t border-border my-1" />
-                  )}
-
-                {showLogout && (
-                  <DropdownOption
-                    onClick={handleLogout}
-                    icon={<FiLogOut size={16} className="my-auto" />}
-                    label="Log out"
-                  />
-                )}
+              
+                
               </>
             )}
           </div>

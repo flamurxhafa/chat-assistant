@@ -8,9 +8,9 @@ import { getSecondsUntilExpiration } from "@/lib/time";
 import { User } from "@/lib/types";
 import { refreshToken } from "./refreshUtils";
 import { NEXT_PUBLIC_CUSTOM_REFRESH_URL } from "@/lib/constants";
-import { Button } from "../ui/button";
 import { logout } from "@/lib/user";
 import { usePathname, useRouter } from "next/navigation";
+
 export const HealthCheckBanner = () => {
   const router = useRouter();
   const { error } = useSWR("/api/health", errorHandlingFetcher);
@@ -42,25 +42,24 @@ export const HealthCheckBanner = () => {
     }
   }, [userError, pathname]);
 
-  // Function to handle the "Log in" button click
-  const handleLogin = () => {
-    setShowLoggedOutModal(false);
-    router.push("/auth/login");
-  };
+  // 🚨 Auto-redirect when logged out
+  useEffect(() => {
+    if (showLoggedOutModal) {
+      // Choose one:
+      router.push("/auth/login");       // SPA-style
+      // window.location.href = "/auth/login"; // Full reload (recommended if session must reset)
+    }
+  }, [showLoggedOutModal, router]);
 
   // Function to set up expiration timeout
   const setupExpirationTimeout = useCallback(
     (secondsUntilExpiration: number) => {
-      // Clear any existing timeout
       if (expirationTimeoutRef.current) {
         clearTimeout(expirationTimeoutRef.current);
       }
-
-      // Set timeout to show logout modal when session expires
       const timeUntilExpire = (secondsUntilExpiration + 10) * 1000;
       expirationTimeoutRef.current = setTimeout(() => {
         setExpired(true);
-
         if (!pathname?.includes("/auth")) {
           setShowLoggedOutModal(true);
         }
@@ -75,7 +74,6 @@ export const HealthCheckBanner = () => {
       if (expirationTimeoutRef.current) {
         clearTimeout(expirationTimeoutRef.current);
       }
-
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
       }
@@ -85,11 +83,9 @@ export const HealthCheckBanner = () => {
   // Set up token refresh logic if custom refresh URL exists
   useEffect(() => {
     if (!user) return;
-
     const secondsUntilExpiration = getSecondsUntilExpiration(user);
     if (secondsUntilExpiration === null) return;
 
-    // Set up expiration timeout based on current user data
     setupExpirationTimeout(secondsUntilExpiration);
 
     if (NEXT_PUBLIC_CUSTOM_REFRESH_URL) {
@@ -98,21 +94,16 @@ export const HealthCheckBanner = () => {
       const attemptTokenRefresh = async () => {
         let retryCount = 0;
         const maxRetries = 3;
-
         while (retryCount < maxRetries) {
           try {
             const refreshTokenData = await refreshToken(refreshUrl);
-            if (!refreshTokenData) {
-              throw new Error("Failed to refresh token");
-            }
+            if (!refreshTokenData) throw new Error("Failed to refresh token");
 
             const response = await fetch(
               "/api/enterprise-settings/refresh-token",
               {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(refreshTokenData),
               }
             );
@@ -120,38 +111,27 @@ export const HealthCheckBanner = () => {
               throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            // Wait for backend to process the token
+            // wait for backend to process
             await new Promise((resolve) => setTimeout(resolve, 4000));
 
-            // Get updated user data
             const updatedUser = await mutateUser();
-
             if (updatedUser) {
-              // Reset expiration timeout with new expiration time
-              const newSecondsUntilExpiration =
-                getSecondsUntilExpiration(updatedUser);
-              if (newSecondsUntilExpiration !== null) {
-                setupExpirationTimeout(newSecondsUntilExpiration);
+              const newSeconds = getSecondsUntilExpiration(updatedUser);
+              if (newSeconds !== null) {
+                setupExpirationTimeout(newSeconds);
                 console.debug(
-                  `Token refreshed, new expiration in ${newSecondsUntilExpiration} seconds`
+                  `Token refreshed, new expiration in ${newSeconds} seconds`
                 );
               }
             }
-
-            break; // Success - exit the retry loop
+            break; // success
           } catch (error) {
             console.error(
-              `Error refreshing token (attempt ${
-                retryCount + 1
-              }/${maxRetries}):`,
+              `Error refreshing token (attempt ${retryCount + 1}/3):`,
               error
             );
             retryCount++;
-
-            if (retryCount === maxRetries) {
-              console.error("Max retry attempts reached");
-            } else {
-              // Wait before retrying (exponential backoff)
+            if (retryCount < maxRetries) {
               await new Promise((resolve) =>
                 setTimeout(resolve, Math.pow(2, retryCount) * 1000)
               );
@@ -160,67 +140,43 @@ export const HealthCheckBanner = () => {
         }
       };
 
-      // Set up refresh interval
-      const refreshInterval = 60 * 15; // 15 mins
-
-      // Clear any existing interval
+      // refresh interval (15 mins)
+      const refreshInterval = 60 * 15;
       if (refreshIntervalRef.current) {
         clearInterval(refreshIntervalRef.current);
       }
-
       refreshIntervalRef.current = setInterval(
         attemptTokenRefresh,
         refreshInterval * 1000
       );
 
-      // If we're going to expire before the next refresh, kick off a refresh now
       if (secondsUntilExpiration < refreshInterval) {
         attemptTokenRefresh();
       }
     }
   }, [user, setupExpirationTimeout, mutateUser]);
 
-  // Logged out modal
-  if (showLoggedOutModal) {
-    return (
-      <Modal
-        width="w-1/3"
-        className="overflow-y-hidden flex flex-col"
-        title="You Have Been Logged Out"
-      >
-        <div className="flex flex-col gap-y-4">
-          <p className="text-sm">
-            Your session has expired. Please log in again to continue.
-          </p>
-          <div className="flex flex-row gap-x-2 justify-end mt-4">
-            <Button onClick={handleLogin}>Log In</Button>
-          </div>
-        </div>
-      </Modal>
-    );
-  }
+  // If backend is fine and session not expired → show nothing
+  if (!error && !expired) return null;
 
-  if (!error && !expired) {
-    return null;
-  }
-
+  // Backend unavailable or expired
   if (error instanceof RedirectError || expired) {
     if (!pathname?.includes("/auth")) {
       setShowLoggedOutModal(true);
     }
     return null;
-  } else {
-    return (
-      <div className="fixed top-0 left-0 z-[101] w-full text-xs mx-auto bg-gradient-to-r from-red-900 to-red-700 p-2 rounded-sm border-hidden text-neutral-50 dark:text-neutral-100">
-        <p className="font-bold pb-1">The backend is currently unavailable.</p>
-
-        <p className="px-1">
-          If this is your initial setup or you just updated your Onyx
-          deployment, this is likely because the backend is still starting up.
-          Give it a minute or two, and then refresh the page. If that does not
-          work, make sure the backend is setup and/or contact an administrator.
-        </p>
-      </div>
-    );
   }
+
+  // Show health banner if backend unavailable
+  return (
+    <div className="fixed top-0 left-0 z-[101] w-full text-xs mx-auto bg-gradient-to-r from-red-900 to-red-700 p-2 rounded-sm border-hidden text-neutral-50 dark:text-neutral-100">
+      <p className="font-bold pb-1">The backend is currently unavailable.</p>
+      <p className="px-1">
+        If this is your initial setup or you just updated your Onyx deployment,
+        this is likely because the backend is still starting up. Give it a
+        minute or two, and then refresh the page. If that does not work, make
+        sure the backend is setup and/or contact an administrator.
+      </p>
+    </div>
+  );
 };

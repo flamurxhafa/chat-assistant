@@ -74,7 +74,7 @@ class UserManager:
         )
         headers = test_user.headers.copy()
         headers["Content-Type"] = "application/x-www-form-urlencoded"
-
+    
         response = requests.post(
             url=f"{API_SERVER_URL}/auth/login",
             data=data,
