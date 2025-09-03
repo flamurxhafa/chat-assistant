@@ -25,6 +25,8 @@ export default function LoginPage({
           let tokenInfo = match?.[1] ? decodeURIComponent(match[1]) : undefined;
           if (tokenInfo) {
                       localStorage.setItem("tokenInfo", tokenInfo);
+          }else{
+             window.location.reload();
           }
         }
         console.log("tokenInfo",tokenInfo)
