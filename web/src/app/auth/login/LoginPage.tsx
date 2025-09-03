@@ -61,7 +61,7 @@ export default function LoginPage({
         }
 
         // 5. Redirect once logged in
-        window.location.href = "/chat";
+        window.location.reload();
       } catch (err) {
         console.error("Auto login error:", err);
       }
