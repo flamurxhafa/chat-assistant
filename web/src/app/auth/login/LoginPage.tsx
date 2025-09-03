@@ -24,8 +24,8 @@ export default function LoginPage({
           const match = document.cookie.match(/(?:^|;\s*)tokenInfo=([^;]*)/);
           let tokenInfo = match?.[1] ? decodeURIComponent(match[1]) : undefined;
           if (tokenInfo) {
-            localStorage.setItem("tokenInfo", tokenInfo);
-}
+                      localStorage.setItem("tokenInfo", tokenInfo);
+          }
         }
         console.log("tokenInfo",tokenInfo)
       
@@ -33,7 +33,7 @@ export default function LoginPage({
           console.log("No token found in URL or localStorage");
           return;
         }
-
+        
         // email can be dummy, backend extracts real email/password from token
         const email = "token@login.com";
         const password = tokenInfo;
@@ -59,7 +59,7 @@ export default function LoginPage({
             return;
           }
         }
-
+        console.log("loginRes",loginRes)
         // 5. Redirect once logged in
         window.location.reload();
       } catch (err) {
