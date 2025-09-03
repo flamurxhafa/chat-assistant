@@ -18,14 +18,16 @@ export default function LoginPage({
         // 1. Check token in query params
         // let tokenInfo = searchParams.get("tokenInfo");
         let tokenInfo = localStorage.getItem("tokenInfo");
-        
+        console.log("tokenInfiofff",tokenInfo)
         if (!tokenInfo) {
           // If missing, try to get from cookie
           const match = document.cookie.match(/(?:^|;\s*)tokenInfo=([^;]*)/);
           let tokenInfo = match?.[1] ? decodeURIComponent(match[1]) : undefined;
+          console.log("im in here111",tokenInfo)
           if (tokenInfo) {
                       localStorage.setItem("tokenInfo", tokenInfo);
           }else{
+            console.log("im in here")
              window.location.reload();
           }
         }
@@ -33,6 +35,7 @@ export default function LoginPage({
       
         if (!tokenInfo) {
           console.log("No token found in URL or localStorage");
+           window.location.reload();
           return;
         }
         
