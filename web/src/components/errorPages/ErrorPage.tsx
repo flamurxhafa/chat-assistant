@@ -13,7 +13,7 @@ export default function Error() {
           It seems there was a problem loading your assistant.
         </p>
         <p>
-          Please contact flamur.xhafa@cloudlayer.ai for assistance
+          Please contact flamur.xhafa@cloudlayer.ai for assistance.
         </p>
         
       </div>
