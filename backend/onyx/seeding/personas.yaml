@@ -57,7 +57,7 @@ personas:
   - id: 1
     name: "General"
     description: >
-      Assistant with no search functionalities. Chat directly with the Large Language Model.
+      How can I help?
     prompts:
       - "OnlyLLM"
     num_chunks: 0
