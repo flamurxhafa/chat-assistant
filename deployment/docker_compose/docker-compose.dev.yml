@@ -15,8 +15,6 @@ services:
       - inference_model_server
       - minio
     restart: unless-stopped
-    ports:
-      - "8080:8080"
     env_file:
       - .env
     environment:
@@ -404,8 +402,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
       - DB_READONLY_USER=${DB_READONLY_USER:-}
       - DB_READONLY_PASSWORD=${DB_READONLY_PASSWORD:-}
-    ports:
-      - "5432:5432"
+
     volumes:
       - db_volume:/var/lib/postgresql/data
 
@@ -415,9 +412,7 @@ services:
     restart: unless-stopped
     environment:
       - VESPA_SKIP_UPGRADE_CHECK=true
-    ports:
-      - "19071:19071"
-      - "8081:8081"
+
     volumes:
       - vespa_volume:/opt/vespa/var
     logging:
@@ -438,7 +433,7 @@ services:
       - DOMAIN=localhost
     ports:
       - "80:80"
-      - "3000:80" # allow for localhost:3000 usage, since that is the norm
+      - "443:443" # allow for localhost:3000 usage, since that is the norm
     volumes:
       - ../data/nginx:/etc/nginx/conf.d
     logging:
@@ -458,8 +453,7 @@ services:
   cache:
     image: redis:7.4-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+
     # docker silently mounts /data even without an explicit volume mount, which enables
     # persistence. explicitly setting save and appendonly forces ephemeral behavior.
     command: redis-server --save "" --appendonly no
@@ -467,9 +461,7 @@ services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
-    ports:
-      - "9004:9000"
-      - "9005:9001"
+
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
