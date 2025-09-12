@@ -15,6 +15,8 @@ services:
       - inference_model_server
       - minio
     restart: unless-stopped
+    ports:
+      - "8080:8080"
     env_file:
       - .env
     environment:
@@ -283,7 +285,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # optional, only for debugging purposes
-  
+
     logging:
       driver: json-file
       options:
