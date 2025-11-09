@@ -246,6 +246,8 @@ def add_slack_user_if_not_exists(db_session: Session, email: str) -> User:
         return user
 
     user = _generate_slack_user(email=email)
+    # Set default pinned_assistants to [-1] for new Slack users
+    user.pinned_assistants = [-1]
     db_session.add(user)
     db_session.commit()
     return user
@@ -289,7 +291,10 @@ def batch_add_ext_perm_user_if_not_exists(
 
     new_users: list[User] = []
     for email in missing_lower_emails:
-        new_users.append(_generate_ext_permissioned_user(email=email))
+        user = _generate_ext_permissioned_user(email=email)
+        # Set default pinned_assistants to [-1] for new external permissioned users
+        user.pinned_assistants = [-1]
+        new_users.append(user)
 
     try:
         db_session.add_all(new_users)

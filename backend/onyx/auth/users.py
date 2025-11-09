@@ -350,6 +350,12 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                         if user_by_session:
                             user = user_by_session
                     raise exceptions.UserAlreadyExists()
+                
+                # Set default pinned_assistants to [-1] for new users
+                if user.pinned_assistants is None:
+                    user.pinned_assistants = [-1]
+                    await db_session.commit()
+                
                 remove_user_from_invited_users(user_create.email)
         finally:
             CURRENT_TENANT_ID_CONTEXTVAR.reset(token)
