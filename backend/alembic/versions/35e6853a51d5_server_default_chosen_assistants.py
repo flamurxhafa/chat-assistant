@@ -16,7 +16,7 @@ down_revision = "c99d76fcd298"
 branch_labels = None
 depends_on = None
 
-DEFAULT_ASSISTANTS = [-2, -1, 0]
+DEFAULT_ASSISTANTS = [ -1]
 
 
 def upgrade() -> None:
