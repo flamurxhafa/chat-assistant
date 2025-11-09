@@ -54,6 +54,7 @@ from httpx_oauth.integrations.fastapi import OAuth2AuthorizeCallback
 from httpx_oauth.oauth2 import BaseOAuth2
 from httpx_oauth.oauth2 import OAuth2Token
 from pydantic import BaseModel
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from onyx.auth.api_key import get_hashed_api_key_from_request
@@ -352,9 +353,13 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                     raise exceptions.UserAlreadyExists()
                 
                 # Set default pinned_assistants to [-1] for new users
-                if user.pinned_assistants is None:
-                    user.pinned_assistants = [-1]
-                    await db_session.commit()
+                # Always set to [-1] for new users, regardless of existing value
+                await db_session.execute(
+                    update(User)
+                    .where(User.id == user.id)  # type: ignore
+                    .values(pinned_assistants=[-1])
+                )
+                await db_session.commit()
                 
                 remove_user_from_invited_users(user_create.email)
         finally:
